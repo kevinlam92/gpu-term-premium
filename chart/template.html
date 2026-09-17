@@ -4,501 +4,585 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Term Premium</title>
+<meta name="description" content="Cloud GPU spot prices measured against the same machine's three-year committed price, across AWS, Azure and Google Cloud.">
 <style>
   :root {
     color-scheme: light;
-    --surface-0: #f7f7f5;
-    --surface-1: #fcfcfb;
-    --border:    #e2e1dc;
-    --grid:      #eceae5;
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #7a7975;
-    --series-1: #2a78d6;
-    --series-2: #eb6834;
-    --series-3: #1baf7a;
-    --series-4: #eda100;
-    --rule:     #52514e;
-    --band:     rgba(42,120,214,.06);
+    --paper:      #fbfaf7;
+    --ink:        #17171a;
+    --ink-2:      #4a4a4e;
+    --ink-3:      #86868b;
+    --rule:       #d9d7d0;
+    --hairline:   #e8e6df;
+    --accent-1:   #2a78d6;
+    --accent-2:   #eb6834;
+    --accent-3:   #1baf7a;
+    --quiet:      #8d8b83;
+    --quiet-2:    #b0aea6;
+    --underwater: rgba(23,23,26,.035);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-0: #121211;
-      --surface-1: #1a1a19;
-      --border:    #333330;
-      --grid:      #2b2b28;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #93928a;
-      --series-1: #3987e5;
-      --series-2: #d95926;
-      --series-3: #199e70;
-      --series-4: #c98500;
-      --rule:     #c3c2b7;
-      --band:     rgba(57,135,229,.10);
+      --paper:    #141413;
+      --ink:      #ece9e2;
+      --ink-2:    #b5b3aa;
+      --ink-3:    #86847c;
+      --rule:     #35342f;
+      --hairline: #272622;
+      --accent-1: #3987e5;
+      --accent-2: #d95926;
+      --accent-3: #199e70;
+      --quiet:    #979489;
+      --quiet-2:  #6d6b63;
+      --underwater: rgba(236,233,226,.045);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-0: #121211;
-    --surface-1: #1a1a19;
-    --border:    #333330;
-    --grid:      #2b2b28;
-    --text-primary:   #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted:     #93928a;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --rule:     #c3c2b7;
-    --band:     rgba(57,135,229,.10);
+    --paper:    #141413;
+    --ink:      #ece9e2;
+    --ink-2:    #b5b3aa;
+    --ink-3:    #86847c;
+    --rule:     #35342f;
+    --hairline: #272622;
+    --accent-1: #3987e5;
+    --accent-2: #d95926;
+    --accent-3: #199e70;
+    --quiet:    #979489;
+    --quiet-2:  #6d6b63;
+    --underwater: rgba(236,233,226,.045);
   }
 
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
-    background: var(--surface-0);
-    color: var(--text-primary);
-    font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 17px/1.6 Georgia, "Iowan Old Style", "Times New Roman", serif;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 40px 16px 72px; }
+  .sheet { max-width: 880px; margin: 0 auto; padding: 64px 16px 80px; }
 
-  header { margin-bottom: 28px; }
-  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.02em; }
-  .sub { color: var(--text-secondary); max-width: 62ch; margin: 0 0 4px; }
-  .asof { color: var(--text-muted); font-size: 13px; }
-
-  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0 32px; }
-  .kpi {
-    background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 18px;
+  /* ---------- masthead ---------- */
+  .kicker {
+    font: 600 11px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 18px;
   }
-  .kpi .v { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
-  .kpi .k { font-size: 12px; text-transform: uppercase; letter-spacing: .07em;
-            color: var(--text-muted); margin-bottom: 6px; }
-  .kpi .n { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
-
-  .card {
-    background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 10px; padding: 22px 20px 16px; margin-bottom: 22px;
+  h1 {
+    font-weight: 400; font-size: 52px; line-height: 1.05;
+    letter-spacing: -.021em; margin: 0 0 18px;
   }
-  h2 { font-size: 17px; margin: 0 0 4px; letter-spacing: -.01em; }
-  .note { color: var(--text-secondary); font-size: 13.5px; margin: 0 0 16px; max-width: 74ch; }
+  .deck {
+    font-size: 21px; line-height: 1.45; color: var(--ink-2);
+    margin: 0; max-width: 34em;
+  }
+  .byline {
+    font: 400 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink-3); margin: 26px 0 0;
+  }
+  hr {
+    border: 0; border-top: 1px solid var(--rule);
+    margin: 42px 0 0;
+  }
 
-  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; }
-  .legend span { display: inline-flex; align-items: center; gap: 7px;
-                 font-size: 13px; color: var(--text-secondary); }
-  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
-
+  /* ---------- figures ---------- */
+  figure { margin: 46px 0 0; }
+  .fig-kicker {
+    font: 600 11px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 10px;
+  }
+  h2 {
+    font-weight: 400; font-size: 27px; line-height: 1.2;
+    letter-spacing: -.012em; margin: 0 0 12px;
+  }
+  .standfirst {
+    font-size: 17px; line-height: 1.55; color: var(--ink-2);
+    margin: 0 0 30px; max-width: 40em;
+  }
   svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .gridline { stroke: var(--grid); stroke-width: 1; }
-  .axis-text { fill: var(--text-muted); font-size: 11.5px; }
-  .dlabel { font-size: 12px; font-weight: 500; }
-  .parity { stroke: var(--rule); stroke-width: 1.5; }
-  .parity-text { fill: var(--text-secondary); font-size: 11.5px; font-weight: 500; }
-  .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  figcaption {
+    font: 400 12px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink-3); margin: 18px 0 0;
+    padding-top: 12px; border-top: 1px solid var(--hairline);
+  }
+  figcaption b {
+    font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    font-size: 10.5px; color: var(--ink-3); margin-right: 8px;
+  }
 
+  /* ---------- chart furniture ---------- */
+  .gridline { stroke: var(--hairline); stroke-width: 1; }
+  .axis-text {
+    fill: var(--ink-3);
+    font: 400 11.5px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .row-label {
+    fill: var(--ink);
+    font: 400 13px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .row-sub {
+    fill: var(--ink-3);
+    font: 400 11px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .dlabel {
+    font: 500 12.5px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .dlabel-sub {
+    font: 400 11px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    fill: var(--ink-3);
+  }
+  .parity { stroke: var(--ink); stroke-width: 1; }
+  .parity-text {
+    fill: var(--ink-2);
+    font: 500 11px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: .05em;
+  }
+  .line { fill: none; stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; }
+  .line-quiet { fill: none; stroke-width: 1.25; stroke-linejoin: round; }
+
+  /* ---------- tooltip ---------- */
   .tip {
-    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
-    background: var(--surface-1); border: 1px solid var(--border);
-    border-radius: 8px; padding: 9px 11px; font-size: 12.5px;
-    box-shadow: 0 6px 22px rgba(0,0,0,.14); z-index: 20; min-width: 168px;
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .09s;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 2px;
+    padding: 10px 12px; z-index: 30; min-width: 190px;
+    font: 400 12.5px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    box-shadow: 0 2px 16px rgba(0,0,0,.09);
   }
-  .tip b { display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-secondary); }
-  .tip .row { display: flex; justify-content: space-between; gap: 14px; }
-  .tip .row i { font-style: normal; color: var(--text-secondary); display: flex;
-                align-items: center; gap: 6px; }
-  .tip .row b2 { font-variant-numeric: tabular-nums; }
-
-  .toolbar { display: flex; gap: 8px; margin: 26px 0 14px; flex-wrap: wrap; }
-  button {
-    font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 7px;
-    border: 1px solid var(--border); background: var(--surface-1);
-    color: var(--text-secondary); cursor: pointer;
+  .tip h4 {
+    margin: 0 0 7px; font-size: 11px; font-weight: 600; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-3);
   }
-  button[aria-pressed="true"] { color: var(--text-primary); border-color: var(--text-muted); }
+  .tip .r { display: flex; justify-content: space-between; gap: 18px; }
+  .tip .r span:first-child { color: var(--ink-2); display: flex; align-items: center; gap: 7px; }
+  .tip .r span:last-child { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .dash { width: 13px; height: 2px; flex: none; border-radius: 1px; }
 
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--text-muted); font-weight: 500; font-size: 11.5px;
-       text-transform: uppercase; letter-spacing: .06em; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tr.below td.num.tp { font-weight: 600; }
-  .hidden { display: none; }
+  /* ---------- table ---------- */
+  .data {
+    border-collapse: collapse; width: 100%; margin-top: 8px;
+    font: 400 13.5px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .data th {
+    text-align: left; padding: 0 12px 9px 0; border-bottom: 1px solid var(--rule);
+    font-size: 10.5px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); white-space: nowrap;
+  }
+  .data td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--hairline); color: var(--ink-2); }
+  .data td:first-child { color: var(--ink); }
+  .data .n { text-align: right; padding-right: 0; }
+  .data tr.below td { color: var(--ink); }
+  .data tr.below td.tp { font-weight: 600; }
 
-  footer { color: var(--text-muted); font-size: 12.5px; margin-top: 34px;
-           border-top: 1px solid var(--border); padding-top: 18px; }
-  footer p { margin: 0 0 9px; max-width: 80ch; }
-  code { font-size: 12px; background: var(--surface-1); border: 1px solid var(--border);
-         border-radius: 4px; padding: 1px 5px; }
+  /* ---------- notes ---------- */
+  .notes { margin-top: 52px; padding-top: 26px; border-top: 1px solid var(--rule); }
+  .notes h3 {
+    font: 600 11px/1 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 16px;
+  }
+  .notes p { font-size: 15px; line-height: 1.62; color: var(--ink-2); margin: 0 0 14px; max-width: 42em; }
+  .notes p:last-child { margin-bottom: 0; }
+  .notes strong { color: var(--ink); font-weight: 600; }
+  code {
+    font: 400 13px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--ink-2);
+  }
+  a { color: inherit; text-decoration-color: var(--quiet); text-underline-offset: 3px; }
+  a:hover { text-decoration-color: currentColor; }
+  .theme {
+    background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink-3);
+    font: 400 12px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--quiet);
+  }
 
   @media (max-width: 720px) {
-    .kpis { grid-template-columns: 1fr; }
-    h1 { font-size: 24px; }
+    .sheet { padding: 40px 16px 56px; }
+    h1 { font-size: 34px; }
+    .deck { font-size: 18px; }
+    h2 { font-size: 22px; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="sheet">
 
-<header>
-  <h1>The term premium</h1>
-  <p class="sub">
-    Spot price divided by the same machine&rsquo;s three-year committed price.
-    Above 1.0, hourly buyers outbid customers who commit for three years &mdash; normal for
-    scarce silicon. Below 1.0, the seller rents it today, with no commitment,
-    for less than it charges people who signed a three-year deal.
+<p class="kicker">Cloud pricing</p>
+<h1>The term premium</h1>
+<p class="deck">
+  What a cloud charges for a GPU by the hour, measured against what it accepts to
+  lock the same machine away for three years. Below parity, the seller is renting
+  it today, with no commitment, for less than it charges the customers who signed
+  a three-year deal.
+</p>
+<p class="byline" id="byline"></p>
+<hr>
+
+<figure>
+  <p class="fig-kicker">Figure 1</p>
+  <h2>Ninety days in one AWS region</h2>
+  <p class="standfirst">
+    Nvidia&rsquo;s new 32&nbsp;GB card crossed under parity in mid-August and kept falling.
+    Over the same window, in the same four availability zones, the 96&nbsp;GB card and
+    the previous-generation L40S moved the other way.
   </p>
-  <p class="asof" id="asof"></p>
-</header>
-
-<div class="kpis" id="kpis"></div>
-
-<div class="card">
-  <h2>Ninety days, us-west-2</h2>
-  <p class="note">
-    The 32&nbsp;GB card crossed under parity in mid-August and kept going. Over the same
-    window, on the same four availability zones, the 96&nbsp;GB card and the previous-generation
-    L40S moved the other way. AWS is the only one of the three clouds that serves
-    price history.
-  </p>
-  <div class="legend" id="legend-1"></div>
-  <svg id="chart1" viewBox="0 0 900 380" role="img" aria-labelledby="c1title">
-    <title id="c1title">Term premium over 90 days for four AWS GPU instance types in us-west-2</title>
+  <svg id="chart1" viewBox="0 0 880 400" role="img" aria-labelledby="c1t">
+    <title id="c1t">Term premium over ninety days for four AWS GPU instance types in us-west-2</title>
   </svg>
-</div>
+  <figcaption>
+    <b>Source</b>AWS <code>describe-spot-price-history</code>, latest print per availability
+    zone, over the cheapest three-year EC2 Instance Savings Plan. us-west-2.
+  </figcaption>
+</figure>
 
-<div class="card">
-  <h2>Same chip, different cloud</h2>
-  <p class="note">
-    Today&rsquo;s reading for every chip where both legs are published, three US regions per
-    cloud. Dots are the median across SKUs and regions; the bar behind them is the range.
-    The RTX&nbsp;PRO&nbsp;6000 and the H100 both sit on opposite sides of parity depending
-    on whose data centre they are in &mdash; so &ldquo;this card is scarce&rdquo; is never a
-    fact about the card alone.
+<figure>
+  <p class="fig-kicker">Figure 2</p>
+  <h2>The same chip, three clouds</h2>
+  <p class="standfirst">
+    Every chip for which a seller publishes both an hourly and a three-year price.
+    Dots mark the median across SKUs and regions; the line behind them is the range.
+    The H100 spans more than threefold depending only on whose data centre it sits in.
   </p>
-  <div class="legend" id="legend-2"></div>
-  <svg id="chart2" viewBox="0 0 900 460" role="img" aria-labelledby="c2title">
-    <title id="c2title">Term premium by chip and cloud provider, current snapshot</title>
+  <svg id="chart2" viewBox="0 0 880 470" role="img" aria-labelledby="c2t">
+    <title id="c2t">Term premium by chip and cloud provider</title>
   </svg>
-</div>
+  <figcaption>
+    <b>Source</b>AWS, Azure Retail Prices and Google Cloud Billing Catalog, three US
+    regions per cloud. Azure reservation totals divided by 26,280 hours.
+  </figcaption>
+</figure>
 
-<div class="toolbar">
-  <button id="btn-table" aria-pressed="false">Show the numbers</button>
-  <button id="btn-theme" aria-pressed="false">Dark mode</button>
-</div>
-
-<div class="card hidden" id="tablecard">
+<figure>
+  <p class="fig-kicker">The numbers</p>
   <h2>Current readings</h2>
-  <p class="note">Sorted by card memory, largest first. Rows under 1.0 are in bold.</p>
-  <table id="table"><thead><tr>
-    <th>Chip</th><th>VRAM</th><th>Cloud</th><th class="num">SKUs</th>
-    <th class="num">Median</th><th class="num">Low</th><th class="num">High</th>
+  <p class="standfirst">Sorted by card memory, largest first. Readings below parity in bold.</p>
+  <table class="data" id="table"><thead><tr>
+    <th>Chip</th><th>VRAM</th><th>Cloud</th>
+    <th class="n">SKUs</th><th class="n">Median</th><th class="n">Low</th><th class="n">High</th>
   </tr></thead><tbody></tbody></table>
-</div>
+</figure>
 
-<footer>
+<div class="notes">
+  <h3>Method and limits</h3>
   <p>
-    <b>Method.</b> AWS: <code>ec2:describe-spot-price-history</code> over the
-    cheapest EC2 Instance Savings Plan, 3&nbsp;year, All Upfront. Azure: Retail Prices
-    API, spot meters over 3-year reservations, with the whole-term lump sum divided by
-    26,280 hours. GCP: Cloud Billing Catalog, <code>Preemptible</code> over
-    <code>Commit3Yr</code>. The ratio is used rather than a price because both legs are
-    the same SKU, so GPU count and machine size cancel and no hardware spec table is
-    needed.
+    The measure is a ratio rather than a price because both legs are the <strong>same
+    SKU</strong>, so GPU count, processor, memory and disk cancel out. No hardware
+    specification table is needed and none can be got wrong, and each seller is compared
+    only against its own committed book &mdash; which is what makes the three clouds
+    comparable at all.
   </p>
   <p>
-    <b>Limits.</b> AWS spot has been an administered, smoothed price since November 2017,
-    not an auction &mdash; this is a seller&rsquo;s posted price, not an order book. GCP
-    spot is administered outright, so its level carries little capacity information and
-    only its changes do. A quoted price is not proof of available capacity: a low reading
-    on a frontier part may be a phantom market rather than a soft one. The commitment leg
-    is a list price that large buyers negotiate below, which biases every ratio upward
-    &mdash; so a reading under 1.0 is the conservative case.
+    <strong>AWS spot is not an auction.</strong> It has been an administered, smoothed
+    price since November 2017. This is a seller&rsquo;s posted price, not an order book.
+    <strong>Google&rsquo;s spot prices are administered outright</strong>, reset by
+    decision roughly monthly, so only their changes carry information, not their level.
   </p>
-</footer>
+  <p>
+    <strong>A quoted price is not available capacity.</strong> A price is published for
+    machines that cannot always be launched, so a low reading on a frontier part may
+    describe a phantom market rather than a soft one. And the commitment leg is a list
+    price that large buyers negotiate below, which pushes every ratio upward &mdash; so
+    any reading under parity is the conservative case.
+  </p>
+  <p>
+    Method, collector and raw archive:
+    <a href="https://github.com/kevinlam92/gpu-term-premium">github.com/kevinlam92/gpu-term-premium</a>.
+    Azure&rsquo;s pricing API needs no credentials, so the headline number can be checked
+    in a browser. &nbsp;<button class="theme" id="theme">Switch theme</button>
+  </p>
+</div>
 
 </div>
 <div class="tip" id="tip"></div>
 
 <script>
 const DATA = __DATA__;
-
-const SERIES = ["var(--series-1)","var(--series-2)","var(--series-3)","var(--series-4)"];
-const CLOUDS = [["aws","AWS"],["azure","Azure"],["gcp","Google Cloud"]];
 const NS = "http://www.w3.org/2000/svg";
-const el = (n, a = {}) => {
-  const e = document.createElementNS(NS, n);
-  for (const k in a) e.setAttribute(k, a[k]);
-  return e;
-};
+const el = (n, a = {}) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
 const fmt = (v) => v.toFixed(2);
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
-document.getElementById("asof").textContent =
-  "Collected " + DATA.asof + " · us-west-2, us-east-1, us-east-2 (AWS) · " +
-  "westus2, eastus, eastus2 (Azure) · us-central1, us-west1, us-east4 (GCP)";
+const CLOUDS = [["aws", "AWS"], ["azure", "Azure"], ["gcp", "Google"]];
+// Figure 1 is an emphasis chart, not a categorical one: the two instance sizes that
+// fell carry the accents, and the two that did not recede to grey. The story is which
+// lines crossed, so colour is spent only on those.
+const EMPHASIS = {
+  "g7.2xlarge":  { colour: "--accent-1", quiet: false, short: "g7.2xlarge" },
+  "g7.4xlarge":  { colour: "--accent-2", quiet: false, short: "g7.4xlarge" },
+  "g7e.2xlarge": { colour: "--quiet",    quiet: true,  short: "g7e.2xlarge" },
+  "g6e.2xlarge": { colour: "--quiet-2",  quiet: true,  short: "g6e.2xlarge" },
+};
 
-/* ---------- KPI row ---------- */
-const snap = DATA.snapshot;
-const find = (chip, cloud) => snap.find((r) => r.chip === chip && r.cloud === cloud);
-const kpiDefs = [
-  { k: "RTX PRO 6000 · 96 GB", get: () => {
-      const a = find("rtx_pro_6000", "aws"), z = find("rtx_pro_6000", "azure");
-      return [fmt(a.median) + " / " + fmt(z.median), "AWS / Azure — the same card, opposite sides of parity"];
-    } },
-  { k: "H100 · 80 GB", get: () => {
-      const a = find("h100", "aws"), z = find("h100", "azure"), g = find("h100", "gcp");
-      return [fmt(z.median) + " – " + fmt(g.median), "Azure to Google. AWS sits between, at " + fmt(a.median)];
-    } },
-  { k: "RTX PRO 4500 · 32 GB", get: () => {
-      const a = find("rtx_pro_4500", "aws");
-      return [fmt(a.median), "AWS median across 18 SKUs — every size below parity"];
-    } },
-];
-document.getElementById("kpis").innerHTML = kpiDefs.map((d) => {
-  const [v, n] = d.get();
-  return '<div class="kpi"><div class="k">' + d.k + '</div><div class="v">' + v +
-         '</div><div class="n">' + n + "</div></div>";
-}).join("");
+document.getElementById("byline").textContent =
+  "Measured " + new Date(DATA.asof + "T00:00:00Z").toLocaleDateString("en-GB",
+    { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) +
+  " · three US regions per cloud";
 
 /* ---------- tooltip ---------- */
 const tip = document.getElementById("tip");
 function showTip(html, x, y) {
-  tip.innerHTML = html;
-  tip.style.opacity = "1";
+  tip.innerHTML = html; tip.style.opacity = "1";
   const r = tip.getBoundingClientRect();
-  let left = x + 16, top = y - r.height / 2;
-  if (left + r.width > innerWidth - 8) left = x - r.width - 16;
-  top = Math.max(8, Math.min(top, innerHeight - r.height - 8));
-  tip.style.left = left + "px";
-  tip.style.top = top + "px";
+  let left = x + 18, top = y - r.height / 2;
+  if (left + r.width > innerWidth - 8) left = x - r.width - 18;
+  tip.style.left = Math.max(8, left) + "px";
+  tip.style.top = Math.max(8, Math.min(top, innerHeight - r.height - 8)) + "px";
 }
 const hideTip = () => { tip.style.opacity = "0"; };
 
-/* ---------- chart 1: 90-day lines ---------- */
+/* ---------- figure 1 ---------- */
+let redraw1;
 (function () {
   const svg = document.getElementById("chart1");
-  const W = 900, H = 380, M = { t: 14, r: 128, b: 34, l: 46 };
+  const W = 880, H = 400, M = { t: 16, r: 132, b: 40, l: 40 };
   const iw = W - M.l - M.r, ih = H - M.t - M.b;
-
   const keys = Object.keys(DATA.history);
   const all = keys.flatMap((k) => DATA.history[k].points);
   const dates = [...new Set(all.map((p) => p.d))].sort();
-  const yMax = Math.max(...all.map((p) => p.tp)) * 1.06;
-  const yMin = Math.min(0.5, Math.min(...all.map((p) => p.tp)) * 0.94);
+  // Log scale, because this is a ratio: 0.5x and 2x are equal-and-opposite moves away
+  // from parity, and a linear axis both denies that and squashes the series the chart
+  // is actually about into the bottom fifth while the rising ones take the rest.
+  const yMax = Math.max(...all.map((p) => p.tp)) * 1.09;
+  const yMin = Math.min(...all.map((p) => p.tp)) * 0.92;
+  const lg = Math.log, lo = lg(yMin), hi = lg(yMax);
   const X = (d) => M.l + (dates.indexOf(d) / (dates.length - 1)) * iw;
-  const Y = (v) => M.t + ih - ((v - yMin) / (yMax - yMin)) * ih;
+  const Y = (v) => M.t + ih - ((lg(v) - lo) / (hi - lo)) * ih;
+  const TICKS = [0.5, 0.7, 1.5, 2, 2.5, 3].filter((t) => t >= yMin && t <= yMax);
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-  // band below parity, so "under water" reads pre-attentively
-  svg.appendChild(el("rect", {
-    x: M.l, y: Y(1), width: iw, height: Math.max(0, M.t + ih - Y(1)),
-    fill: "var(--band)",
-  }));
+  redraw1 = function () {
+    svg.textContent = "";
+    svg.appendChild(el("title", {})).textContent =
+      "Term premium over ninety days for four AWS GPU instance types in us-west-2";
 
-  for (let v = 0.5; v <= yMax; v += 0.5) {
-    if (v < yMin) continue;
-    svg.appendChild(el("line", { x1: M.l, x2: M.l + iw, y1: Y(v), y2: Y(v), class: "gridline" }));
-    const t = el("text", { x: M.l - 9, y: Y(v) + 4, class: "axis-text", "text-anchor": "end" });
-    t.textContent = v.toFixed(1) + "×";
-    svg.appendChild(t);
-  }
+    // everything under parity, shaded once — the chart's whole subject
+    svg.appendChild(el("rect", {
+      x: M.l, y: Y(1), width: iw, height: Math.max(0, M.t + ih - Y(1)), fill: css("--underwater"),
+    }));
 
-  // parity rule
-  svg.appendChild(el("line", { x1: M.l, x2: M.l + iw, y1: Y(1), y2: Y(1), class: "parity" }));
-  const pl = el("text", { x: M.l + 6, y: Y(1) - 7, class: "parity-text" });
-  pl.textContent = "parity — spot equals the three-year price";
-  svg.appendChild(pl);
+    for (const v of TICKS) {
+      svg.appendChild(el("line", { x1: M.l, x2: M.l + iw, y1: Y(v), y2: Y(v), class: "gridline" }));
+      const t = el("text", { x: M.l - 10, y: Y(v) + 4, class: "axis-text", "text-anchor": "end" });
+      t.textContent = v.toFixed(1);
+      svg.appendChild(t);
+    }
 
-  dates.forEach((d, i) => {
-    if (i % 15 !== 0 && i !== dates.length - 1) return;
-    const t = el("text", { x: X(d), y: H - 12, class: "axis-text", "text-anchor": "middle" });
-    t.textContent = d.slice(5).replace("-", "/");
-    svg.appendChild(t);
-  });
+    svg.appendChild(el("line", { x1: M.l, x2: M.l + iw, y1: Y(1), y2: Y(1), class: "parity" }));
+    const pt = el("text", { x: M.l, y: Y(1) - 9, class: "parity-text" });
+    pt.textContent = "PARITY";
+    svg.appendChild(pt);
+    const py = el("text", { x: M.l - 10, y: Y(1) + 4, class: "axis-text", "text-anchor": "end" });
+    py.textContent = "1.0";
+    svg.appendChild(py);
 
-  keys.forEach((k, i) => {
-    const s = DATA.history[k];
-    const d = s.points.map((p, j) => (j ? "L" : "M") + X(p.d) + " " + Y(p.tp)).join(" ");
-    svg.appendChild(el("path", { d, class: "line", stroke: SERIES[i] }));
-  });
+    let lastMonth = "";
+    dates.forEach((d, i) => {
+      const m = d.slice(0, 7);
+      const first = m !== lastMonth;
+      if (!first && i !== dates.length - 1) return;
+      if (first) lastMonth = m;
+      const t = el("text", {
+        x: X(d), y: H - 14, class: "axis-text",
+        "text-anchor": i === dates.length - 1 ? "end" : "start",
+      });
+      t.textContent = first ? MONTHS[+d.slice(5, 7) - 1] : "";
+      if (t.textContent) svg.appendChild(t);
+    });
 
-  // Direct labels, pushed apart so near-equal endpoints stay readable. Two
-  // series can end within a few hundredths of each other, which at this scale
-  // is a handful of pixels; a label that overlaps its neighbour is worse than
-  // no label, and the relief rule makes these mandatory rather than optional.
-  const MIN_GAP = 15;
-  const marks = keys.map((k, i) => {
-    const last = DATA.history[k].points[DATA.history[k].points.length - 1];
-    return { i, k, tp: last.tp, y0: Y(last.tp), y: Y(last.tp) };
-  }).sort((a, b) => a.y0 - b.y0);
-  for (let i = 1; i < marks.length; i++) {
-    marks[i].y = Math.max(marks[i].y, marks[i - 1].y + MIN_GAP);
-  }
-  const overflow = marks[marks.length - 1].y - (M.t + ih);
-  if (overflow > 0) marks.forEach((m) => { m.y -= overflow; });
-  marks.forEach((m) => {
-    const x = M.l + iw;
-    if (Math.abs(m.y - m.y0) > 1) {
-      // leader from the line end to the displaced label
+    // quiet series first so the accented lines sit above them
+    const ordered = keys.slice().sort((a, b) =>
+      Number(EMPHASIS[b]?.quiet ?? 0) - Number(EMPHASIS[a]?.quiet ?? 0));
+    for (const k of ordered) {
+      const s = DATA.history[k], e = EMPHASIS[k] || { colour: "--quiet", quiet: true, short: k };
+      const d = s.points.map((p, j) => (j ? "L" : "M") + X(p.d) + " " + Y(p.tp)).join(" ");
       svg.appendChild(el("path", {
-        d: "M" + x + " " + m.y0 + " L" + (x + 5) + " " + m.y0 +
-           " L" + (x + 7) + " " + m.y + " L" + (x + 10) + " " + m.y,
-        fill: "none", stroke: SERIES[m.i], "stroke-width": 1, opacity: .55,
+        d, class: e.quiet ? "line-quiet" : "line", stroke: css(e.colour),
       }));
     }
-    const lab = el("text", { x: x + 13, y: m.y + 4, class: "dlabel", fill: SERIES[m.i] });
-    lab.textContent = DATA.history[m.k].label.split(" ")[0] + "  " + fmt(m.tp);
-    svg.appendChild(lab);
-  });
 
-  document.getElementById("legend-1").innerHTML = keys.map((k, i) =>
-    '<span><i class="swatch" style="background:' + SERIES[i] + '"></i>' +
-    DATA.history[k].label + " · 3yr $" + DATA.history[k].commit3y.toFixed(2) + "/hr</span>"
-  ).join("");
+    // direct labels, pushed apart: two series end within a few hundredths of each other
+    const MIN_GAP = 34;
+    const marks = keys.map((k) => {
+      const last = DATA.history[k].points[DATA.history[k].points.length - 1];
+      return { k, tp: last.tp, y0: Y(last.tp), y: Y(last.tp) };
+    }).sort((a, b) => a.y0 - b.y0);
+    for (let i = 1; i < marks.length; i++) {
+      marks[i].y = Math.max(marks[i].y, marks[i - 1].y + MIN_GAP);
+    }
+    const over = marks[marks.length - 1].y - (M.t + ih);
+    if (over > 0) marks.forEach((m) => { m.y -= over; });
 
-  // crosshair
-  const cross = el("line", { class: "gridline", "stroke-width": 1.5, opacity: 0 });
-  svg.appendChild(cross);
-  const dots = keys.map((k, i) => {
-    const c = el("circle", { r: 4.5, fill: SERIES[i], stroke: "var(--surface-1)",
-                             "stroke-width": 2, opacity: 0 });
-    svg.appendChild(c);
-    return c;
-  });
-  svg.appendChild(el("rect", {
-    x: M.l, y: M.t, width: iw, height: ih, fill: "transparent", style: "cursor:crosshair",
-  }));
-  const hit = svg.lastChild;
-  hit.addEventListener("mousemove", (ev) => {
-    const box = svg.getBoundingClientRect();
-    const px = ((ev.clientX - box.left) / box.width) * W;
-    let idx = Math.round(((px - M.l) / iw) * (dates.length - 1));
-    idx = Math.max(0, Math.min(dates.length - 1, idx));
-    const day = dates[idx];
-    cross.setAttribute("x1", X(day)); cross.setAttribute("x2", X(day));
-    cross.setAttribute("y1", M.t); cross.setAttribute("y2", M.t + ih);
-    cross.setAttribute("opacity", 1);
-    let rows = "";
-    keys.forEach((k, i) => {
-      const p = DATA.history[k].points.find((q) => q.d === day);
-      if (!p) { dots[i].setAttribute("opacity", 0); return; }
-      dots[i].setAttribute("cx", X(day)); dots[i].setAttribute("cy", Y(p.tp));
-      dots[i].setAttribute("opacity", 1);
-      rows += '<div class="row"><i><span class="swatch" style="background:' + SERIES[i] +
-              '"></span>' + DATA.history[k].label.split(" ")[0] + "</i><b2>" + fmt(p.tp) +
-              "× &nbsp;$" + p.spot.toFixed(3) + "</b2></div>";
-    });
-    showTip("<b>" + day + "</b>" + rows, ev.clientX, ev.clientY);
-  });
-  hit.addEventListener("mouseleave", () => {
-    hideTip(); cross.setAttribute("opacity", 0);
-    dots.forEach((d) => d.setAttribute("opacity", 0));
-  });
-})();
-
-/* ---------- chart 2: dot plot ---------- */
-(function () {
-  const svg = document.getElementById("chart2");
-  const W = 900, H = 460, M = { t: 26, r: 24, b: 40, l: 176 };
-  const iw = W - M.l - M.r;
-
-  const order = [...new Set(snap.map((r) => r.chip))];
-  const rowH = (H - M.t - M.b) / order.length;
-  const xMax = Math.max(...snap.map((r) => r.max)) * 1.05;
-  const X = (v) => M.l + (v / xMax) * iw;
-  const Y = (chip) => M.t + order.indexOf(chip) * rowH + rowH / 2;
-
-  svg.appendChild(el("rect", {
-    x: M.l, y: M.t - 10, width: X(1) - M.l, height: H - M.t - M.b + 12, fill: "var(--band)",
-  }));
-
-  for (let v = 0; v <= xMax; v += 0.5) {
-    svg.appendChild(el("line", {
-      x1: X(v), x2: X(v), y1: M.t - 10, y2: H - M.b + 2, class: "gridline",
-    }));
-    const t = el("text", { x: X(v), y: H - M.b + 20, class: "axis-text", "text-anchor": "middle" });
-    t.textContent = v.toFixed(1) + "×";
-    svg.appendChild(t);
-  }
-  svg.appendChild(el("line", {
-    x1: X(1), x2: X(1), y1: M.t - 10, y2: H - M.b + 2, class: "parity",
-  }));
-  const pt = el("text", { x: X(1), y: M.t - 16, class: "parity-text", "text-anchor": "middle" });
-  pt.textContent = "parity";
-  svg.appendChild(pt);
-
-  order.forEach((chip) => {
-    const rows = snap.filter((r) => r.chip === chip);
-    const meta = rows[0];
-    const lab = el("text", { x: M.l - 12, y: Y(chip) - 2, class: "axis-text",
-                             "text-anchor": "end", fill: "var(--text-primary)" });
-    lab.setAttribute("font-size", "12.5");
-    lab.textContent = meta.name.replace(" Blackwell Server Edition", "")
-                               .replace(" Blackwell", "").replace(" SXM", "");
-    svg.appendChild(lab);
-    const vr = el("text", { x: M.l - 12, y: Y(chip) + 13, class: "axis-text", "text-anchor": "end" });
-    vr.textContent = meta.vram_gb ? meta.vram_gb + " GB · " + meta.launched : "";
-    svg.appendChild(vr);
-
-    rows.forEach((r) => {
-      const ci = CLOUDS.findIndex((c) => c[0] === r.cloud);
-      const color = SERIES[ci];
-      if (r.max > r.min) {
-        svg.appendChild(el("line", {
-          x1: X(r.min), x2: X(r.max), y1: Y(chip), y2: Y(chip),
-          stroke: color, "stroke-width": 2, opacity: .3, "stroke-linecap": "round",
+    for (const m of marks) {
+      const e = EMPHASIS[m.k] || { colour: "--quiet", quiet: true, short: m.k };
+      const c = css(e.colour), x = M.l + iw;
+      if (Math.abs(m.y - m.y0) > 1) {
+        svg.appendChild(el("path", {
+          d: "M" + x + " " + m.y0 + " L" + (x + 6) + " " + m.y0 +
+             " L" + (x + 9) + " " + m.y + " L" + (x + 12) + " " + m.y,
+          fill: "none", stroke: c, "stroke-width": 1, opacity: .5,
         }));
       }
-      const c = el("circle", {
-        cx: X(r.median), cy: Y(chip), r: 6, fill: color,
-        stroke: "var(--surface-1)", "stroke-width": 2, style: "cursor:pointer",
+      const lab = el("text", {
+        x: x + 16, y: m.y, class: "dlabel", fill: e.quiet ? css("--ink-2") : c,
       });
-      c.addEventListener("mousemove", (ev) => showTip(
-        "<b>" + r.name + " · " + CLOUDS[ci][1] + "</b>" +
-        '<div class="row"><i>median</i><b2>' + fmt(r.median) + "×</b2></div>" +
-        '<div class="row"><i>range</i><b2>' + fmt(r.min) + " – " + fmt(r.max) + "</b2></div>" +
-        '<div class="row"><i>SKUs</i><b2>' + r.n + "</b2></div>",
-        ev.clientX, ev.clientY));
-      c.addEventListener("mouseleave", hideTip);
-      svg.appendChild(c);
-    });
-  });
+      lab.textContent = e.short;
+      svg.appendChild(lab);
+      const sub = el("text", { x: x + 16, y: m.y + 15, class: "dlabel-sub" });
+      sub.textContent = fmt(m.tp) + "×";
+      svg.appendChild(sub);
+    }
 
-  document.getElementById("legend-2").innerHTML = CLOUDS.map((c, i) =>
-    '<span><i class="swatch" style="background:' + SERIES[i] + '"></i>' + c[1] + "</span>"
-  ).join("");
+    // crosshair
+    const cross = el("line", { class: "gridline", "stroke-width": 1, opacity: 0 });
+    svg.appendChild(cross);
+    const dots = keys.map((k) => {
+      const e = EMPHASIS[k] || { colour: "--quiet" };
+      const c = el("circle", { r: 3.5, fill: css(e.colour), stroke: css("--paper"), "stroke-width": 2, opacity: 0 });
+      svg.appendChild(c); return c;
+    });
+    const hit = el("rect", { x: M.l, y: M.t, width: iw, height: ih, fill: "transparent", style: "cursor:crosshair" });
+    svg.appendChild(hit);
+    hit.addEventListener("mousemove", (ev) => {
+      const box = svg.getBoundingClientRect();
+      const px = ((ev.clientX - box.left) / box.width) * W;
+      let idx = Math.round(((px - M.l) / iw) * (dates.length - 1));
+      idx = Math.max(0, Math.min(dates.length - 1, idx));
+      const day = dates[idx];
+      cross.setAttribute("x1", X(day)); cross.setAttribute("x2", X(day));
+      cross.setAttribute("y1", M.t); cross.setAttribute("y2", M.t + ih);
+      cross.setAttribute("opacity", 1);
+      let rows = "";
+      keys.forEach((k, i) => {
+        const p = DATA.history[k].points.find((q) => q.d === day);
+        const e = EMPHASIS[k] || { colour: "--quiet", short: k };
+        if (!p) { dots[i].setAttribute("opacity", 0); return; }
+        dots[i].setAttribute("cx", X(day)); dots[i].setAttribute("cy", Y(p.tp));
+        dots[i].setAttribute("opacity", 1);
+        rows += '<div class="r"><span><i class="dash" style="background:' + css(e.colour) + '"></i>' +
+                e.short + '</span><span>' + fmt(p.tp) + "× &nbsp; $" + p.spot.toFixed(3) + "</span></div>";
+      });
+      const dt = new Date(day + "T00:00:00Z").toLocaleDateString("en-GB",
+        { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+      showTip("<h4>" + dt + "</h4>" + rows, ev.clientX, ev.clientY);
+    });
+    hit.addEventListener("mouseleave", () => {
+      hideTip(); cross.setAttribute("opacity", 0);
+      dots.forEach((d) => d.setAttribute("opacity", 0));
+    });
+  };
+  redraw1();
+})();
+
+/* ---------- figure 2 ---------- */
+let redraw2;
+(function () {
+  const svg = document.getElementById("chart2");
+  const snap = DATA.snapshot;
+  const W = 880, H = 470, M = { t: 34, r: 30, b: 42, l: 172 };
+  const iw = W - M.l - M.r;
+  const order = [...new Set(snap.map((r) => r.chip))];
+  const rowH = (H - M.t - M.b) / order.length;
+  const xMax = Math.max(...snap.map((r) => r.max)) * 1.06;
+  const xMin = Math.min(...snap.map((r) => r.min)) * 0.94;
+  const lg = Math.log, lo = lg(xMin), hi = lg(xMax);
+  const X = (v) => M.l + ((lg(v) - lo) / (hi - lo)) * iw;
+  const XTICKS = [0.5, 0.7, 1.5, 2, 2.5, 3].filter((v) => v >= xMin && v <= xMax);
+  const Y = (chip) => M.t + order.indexOf(chip) * rowH + rowH / 2;
+  const ACCENTS = ["--accent-1", "--accent-2", "--accent-3"];
+
+  redraw2 = function () {
+    svg.textContent = "";
+    svg.appendChild(el("title", {})).textContent = "Term premium by chip and cloud provider";
+
+    svg.appendChild(el("rect", {
+      x: M.l, y: M.t - 14, width: X(1) - M.l, height: H - M.t - M.b + 16, fill: css("--underwater"),
+    }));
+    for (const v of XTICKS) {
+      svg.appendChild(el("line", { x1: X(v), x2: X(v), y1: M.t - 14, y2: H - M.b + 2, class: "gridline" }));
+      const t = el("text", { x: X(v), y: H - M.b + 22, class: "axis-text", "text-anchor": "middle" });
+      t.textContent = v.toFixed(1);
+      svg.appendChild(t);
+    }
+    svg.appendChild(el("line", { x1: X(1), x2: X(1), y1: M.t - 14, y2: H - M.b + 2, class: "parity" }));
+    const pt = el("text", { x: X(1), y: M.t - 21, class: "parity-text", "text-anchor": "middle" });
+    pt.textContent = "PARITY";
+    svg.appendChild(pt);
+    const p1 = el("text", { x: X(1), y: H - M.b + 22, class: "axis-text", "text-anchor": "middle", fill: css("--ink-2") });
+    p1.textContent = "1.0";
+    svg.appendChild(p1);
+
+    // legend, inline above the plot rather than in a box
+    let lx = M.l;
+    CLOUDS.forEach(([key, name], i) => {
+      svg.appendChild(el("circle", { cx: lx + 4, cy: M.t - 25, r: 4, fill: css(ACCENTS[i]) }));
+      const t = el("text", { x: lx + 14, y: M.t - 21, class: "axis-text", fill: css("--ink-2") });
+      t.textContent = name;
+      svg.appendChild(t);
+      lx += 18 + name.length * 7.2;
+    });
+
+    for (const chip of order) {
+      const rows = snap.filter((r) => r.chip === chip);
+      const meta = rows[0];
+      const lab = el("text", { x: M.l - 16, y: Y(chip) - 1, class: "row-label", "text-anchor": "end" });
+      lab.textContent = meta.name
+        .replace(" Blackwell Server Edition", "").replace(" Blackwell", "").replace(" SXM", "");
+      svg.appendChild(lab);
+      const sub = el("text", { x: M.l - 16, y: Y(chip) + 14, class: "row-sub", "text-anchor": "end" });
+      sub.textContent = meta.vram_gb ? meta.vram_gb + " GB" : "";
+      svg.appendChild(sub);
+
+      for (const r of rows) {
+        const ci = CLOUDS.findIndex((c) => c[0] === r.cloud);
+        const colour = css(ACCENTS[ci]);
+        if (r.max > r.min) {
+          svg.appendChild(el("line", {
+            x1: X(r.min), x2: X(r.max), y1: Y(chip), y2: Y(chip),
+            stroke: colour, "stroke-width": 1.5, opacity: .32, "stroke-linecap": "round",
+          }));
+        }
+        const c = el("circle", {
+          cx: X(r.median), cy: Y(chip), r: 5, fill: colour,
+          stroke: css("--paper"), "stroke-width": 1.5, style: "cursor:pointer",
+        });
+        c.addEventListener("mousemove", (ev) => showTip(
+          "<h4>" + r.name + " · " + CLOUDS[ci][1] + "</h4>" +
+          '<div class="r"><span>Median</span><span>' + fmt(r.median) + "×</span></div>" +
+          '<div class="r"><span>Range</span><span>' + fmt(r.min) + "–" + fmt(r.max) + "</span></div>" +
+          '<div class="r"><span>SKUs</span><span>' + r.n + "</span></div>", ev.clientX, ev.clientY));
+        c.addEventListener("mouseleave", hideTip);
+        svg.appendChild(c);
+      }
+    }
+  };
+  redraw2();
 })();
 
 /* ---------- table ---------- */
-document.querySelector("#table tbody").innerHTML = snap.map((r) => {
+document.querySelector("#table tbody").innerHTML = DATA.snapshot.map((r) => {
   const cloud = (CLOUDS.find((c) => c[0] === r.cloud) || [, r.cloud])[1];
   return '<tr class="' + (r.median < 1 ? "below" : "") + '"><td>' + r.name + "</td><td>" +
     (r.vram_gb ? r.vram_gb + " GB" : "—") + "</td><td>" + cloud +
-    '</td><td class="num">' + r.n + '</td><td class="num tp">' + fmt(r.median) +
-    '</td><td class="num">' + fmt(r.min) + '</td><td class="num">' + fmt(r.max) + "</td></tr>";
+    '</td><td class="n">' + r.n + '</td><td class="n tp">' + fmt(r.median) +
+    '</td><td class="n">' + fmt(r.min) + '</td><td class="n">' + fmt(r.max) + "</td></tr>";
 }).join("");
 
-const btnT = document.getElementById("btn-table");
-btnT.addEventListener("click", () => {
-  const on = btnT.getAttribute("aria-pressed") === "true";
-  btnT.setAttribute("aria-pressed", String(!on));
-  document.getElementById("tablecard").classList.toggle("hidden", on);
-  btnT.textContent = on ? "Show the numbers" : "Hide the numbers";
-});
-
-const btnD = document.getElementById("btn-theme");
-const prefersDark = matchMedia("(prefers-color-scheme: dark)").matches;
-let dark = prefersDark;
+/* ---------- theme ---------- */
+// Charts read their colours from CSS custom properties at draw time, so a theme
+// change has to redraw rather than restyle.
+const btn = document.getElementById("theme");
+let dark = matchMedia("(prefers-color-scheme: dark)").matches;
 const paint = () => {
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-  btnD.setAttribute("aria-pressed", String(dark));
-  btnD.textContent = dark ? "Light mode" : "Dark mode";
+  redraw1(); redraw2();
 };
 paint();
-btnD.addEventListener("click", () => { dark = !dark; paint(); });
+btn.addEventListener("click", () => { dark = !dark; paint(); });
 </script>
 </body>
 </html>
