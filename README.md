@@ -27,6 +27,22 @@ AWS, Azure and GCP all publish both legs for free. Nobody puts them in a ratio.
   packaging the same chip differently.
 - **Discount- and currency-neutral.** Enterprise discounts and FX hit both legs.
 
+## The chart
+
+**<https://kevinlam92.github.io/gpu-term-premium/>** — 90 days of the ratio for four AWS
+instance types in us-west-2, plus today's cross-cloud reading for every chip where both legs
+are published. Rebuilt by `scripts/build_chart.py` into `docs/`, which is what Pages serves.
+
+## Verify the headline without installing anything
+
+Azure's pricing API is anonymous. Paste this in a browser to get the H100 spot and 3-year rows
+for West US 2 — spot is the `Consumption` row with "Spot" in `meterName`, the commitment is the
+`Reservation` row for `3 Years`, and that one is a **whole-term lump sum** (divide by 26,280):
+
+```
+https://prices.azure.com/api/retail/prices?$filter=serviceName eq 'Virtual Machines' and armRegionName eq 'westus2' and armSkuName eq 'Standard_ND96isr_H100_v5'
+```
+
 ## Install and run
 
 ```bash

@@ -15,6 +15,15 @@ over time, and report the changes -- not the level.
 Convenient upside: the catalog exposes commitment pricing natively as usageType
 ``Commit1Yr`` / ``Commit3Yr``, so no term-length arithmetic is needed.
 
+Two structural differences from AWS and Azure, both of which matter downstream:
+
+* Every usageType is a **separate skuId**. Joining on the raw id can never pair
+  a spot price with its commitment, so rows are keyed by accelerator instead.
+* GCP prices the **accelerator on its own**, as a line item separate from the
+  VM it attaches to. AWS and Azure quote whole machines. The ratio stays valid
+  because both legs are the same accelerator-only unit, but a GCP dollar figure
+  is not comparable to an AWS one without adding the host VM back.
+
 Needs an API key (no OAuth): set ``GCP_BILLING_API_KEY``. Without one the
 collector is skipped rather than failing the run.
 """
@@ -127,9 +136,13 @@ def collect(store, regions, api_key=None):
                 continue
             obs.append(Obs(
                 asof=now, cloud="gcp", region=region, zone=None,
-                sku=sku.get("skuId", ""), chip=chip, vram_gb=VRAM.get(chip),
+                # GCP gives every usageType its own skuId, so the raw id can
+                # never join spot to commit3y. The accelerator is the real
+                # unit of comparison here; the skuId is kept in `source` so
+                # the row still traces back to a specific catalog entry.
+                sku="nvidia-" + chip, chip=chip, vram_gb=VRAM.get(chip),
                 price_type=price_type, usd_per_hour=price,
                 term_hours=None, payment=None,
-                source="gcp:billing-catalog|" + desc[:80],
+                source="gcp:billing-catalog|%s|%s" % (sku.get("skuId", ""), desc[:60]),
             ))
     return obs

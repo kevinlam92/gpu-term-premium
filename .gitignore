@@ -1,4 +1,10 @@
 __pycache__/
 *.pyc
-data/raw/
 .venv/
+
+# Ongoing raw collection is gitignored: it is ~7 MB per run and would reach
+# gigabytes within a year. The ONE snapshot the published figures were computed
+# from is committed anyway (git add -f data/raw/dt=2026-09-17) so every number
+# in the chart and the README traces back to the bytes the vendors served.
+# For sustained collection, archive raw to object storage instead of git.
+data/raw/

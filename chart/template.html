@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Term Premium</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f7f7f5;
+    --surface-1: #fcfcfb;
+    --border:    #e2e1dc;
+    --grid:      #eceae5;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #7a7975;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --rule:     #52514e;
+    --band:     rgba(42,120,214,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-0: #121211;
+      --surface-1: #1a1a19;
+      --border:    #333330;
+      --grid:      #2b2b28;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #93928a;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --rule:     #c3c2b7;
+      --band:     rgba(57,135,229,.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --border:    #333330;
+    --grid:      #2b2b28;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #93928a;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --rule:     #c3c2b7;
+    --band:     rgba(57,135,229,.10);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 40px 16px 72px; }
+
+  header { margin-bottom: 28px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.02em; }
+  .sub { color: var(--text-secondary); max-width: 62ch; margin: 0 0 4px; }
+  .asof { color: var(--text-muted); font-size: 13px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 24px 0 32px; }
+  .kpi {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .kpi .v { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
+  .kpi .k { font-size: 12px; text-transform: uppercase; letter-spacing: .07em;
+            color: var(--text-muted); margin-bottom: 6px; }
+  .kpi .n { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 22px 20px 16px; margin-bottom: 22px;
+  }
+  h2 { font-size: 17px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .note { color: var(--text-secondary); font-size: 13.5px; margin: 0 0 16px; max-width: 74ch; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px;
+                 font-size: 13px; color: var(--text-secondary); }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .axis-text { fill: var(--text-muted); font-size: 11.5px; }
+  .dlabel { font-size: 12px; font-weight: 500; }
+  .parity { stroke: var(--rule); stroke-width: 1.5; }
+  .parity-text { fill: var(--text-secondary); font-size: 11.5px; font-weight: 500; }
+  .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+
+  .tip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; font-size: 12.5px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.14); z-index: 20; min-width: 168px;
+  }
+  .tip b { display: block; margin-bottom: 5px; font-size: 12px; color: var(--text-secondary); }
+  .tip .row { display: flex; justify-content: space-between; gap: 14px; }
+  .tip .row i { font-style: normal; color: var(--text-secondary); display: flex;
+                align-items: center; gap: 6px; }
+  .tip .row b2 { font-variant-numeric: tabular-nums; }
+
+  .toolbar { display: flex; gap: 8px; margin: 26px 0 14px; flex-wrap: wrap; }
+  button {
+    font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 7px;
+    border: 1px solid var(--border); background: var(--surface-1);
+    color: var(--text-secondary); cursor: pointer;
+  }
+  button[aria-pressed="true"] { color: var(--text-primary); border-color: var(--text-muted); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-muted); font-weight: 500; font-size: 11.5px;
+       text-transform: uppercase; letter-spacing: .06em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.below td.num.tp { font-weight: 600; }
+  .hidden { display: none; }
+
+  footer { color: var(--text-muted); font-size: 12.5px; margin-top: 34px;
+           border-top: 1px solid var(--border); padding-top: 18px; }
+  footer p { margin: 0 0 9px; max-width: 80ch; }
+  code { font-size: 12px; background: var(--surface-1); border: 1px solid var(--border);
+         border-radius: 4px; padding: 1px 5px; }
+
+  @media (max-width: 720px) {
+    .kpis { grid-template-columns: 1fr; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>The term premium</h1>
+  <p class="sub">
+    Spot price divided by the same machine&rsquo;s three-year committed price.
+    Above 1.0, hourly buyers outbid customers who commit for three years &mdash; normal for
+    scarce silicon. Below 1.0, the seller rents it today, with no commitment,
+    for less than it charges people who signed a three-year deal.
+  </p>
+  <p class="asof" id="asof"></p>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="card">
+  <h2>Ninety days, us-west-2</h2>
+  <p class="note">
+    The 32&nbsp;GB card crossed under parity in mid-August and kept going. Over the same
+    window, on the same four availability zones, the 96&nbsp;GB card and the previous-generation
+    L40S moved the other way. AWS is the only one of the three clouds that serves
+    price history.
+  </p>
+  <div class="legend" id="legend-1"></div>
+  <svg id="chart1" viewBox="0 0 900 380" role="img" aria-labelledby="c1title">
+    <title id="c1title">Term premium over 90 days for four AWS GPU instance types in us-west-2</title>
+  </svg>
+</div>
+
+<div class="card">
+  <h2>Same chip, different cloud</h2>
+  <p class="note">
+    Today&rsquo;s reading for every chip where both legs are published, three US regions per
+    cloud. Dots are the median across SKUs and regions; the bar behind them is the range.
+    The RTX&nbsp;PRO&nbsp;6000 and the H100 both sit on opposite sides of parity depending
+    on whose data centre they are in &mdash; so &ldquo;this card is scarce&rdquo; is never a
+    fact about the card alone.
+  </p>
+  <div class="legend" id="legend-2"></div>
+  <svg id="chart2" viewBox="0 0 900 460" role="img" aria-labelledby="c2title">
+    <title id="c2title">Term premium by chip and cloud provider, current snapshot</title>
+  </svg>
+</div>
+
+<div class="toolbar">
+  <button id="btn-table" aria-pressed="false">Show the numbers</button>
+  <button id="btn-theme" aria-pressed="false">Dark mode</button>
+</div>
+
+<div class="card hidden" id="tablecard">
+  <h2>Current readings</h2>
+  <p class="note">Sorted by card memory, largest first. Rows under 1.0 are in bold.</p>
+  <table id="table"><thead><tr>
+    <th>Chip</th><th>VRAM</th><th>Cloud</th><th class="num">SKUs</th>
+    <th class="num">Median</th><th class="num">Low</th><th class="num">High</th>
+  </tr></thead><tbody></tbody></table>
+</div>
+
+<footer>
+  <p>
+    <b>Method.</b> AWS: <code>ec2:describe-spot-price-history</code> over the
+    cheapest EC2 Instance Savings Plan, 3&nbsp;year, All Upfront. Azure: Retail Prices
+    API, spot meters over 3-year reservations, with the whole-term lump sum divided by
+    26,280 hours. GCP: Cloud Billing Catalog, <code>Preemptible</code> over
+    <code>Commit3Yr</code>. The ratio is used rather than a price because both legs are
+    the same SKU, so GPU count and machine size cancel and no hardware spec table is
+    needed.
+  </p>
+  <p>
+    <b>Limits.</b> AWS spot has been an administered, smoothed price since November 2017,
+    not an auction &mdash; this is a seller&rsquo;s posted price, not an order book. GCP
+    spot is administered outright, so its level carries little capacity information and
+    only its changes do. A quoted price is not proof of available capacity: a low reading
+    on a frontier part may be a phantom market rather than a soft one. The commitment leg
+    is a list price that large buyers negotiate below, which biases every ratio upward
+    &mdash; so a reading under 1.0 is the conservative case.
+  </p>
+</footer>
+
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = __DATA__;
+
+const SERIES = ["var(--series-1)","var(--series-2)","var(--series-3)","var(--series-4)"];
+const CLOUDS = [["aws","AWS"],["azure","Azure"],["gcp","Google Cloud"]];
+const NS = "http://www.w3.org/2000/svg";
+const el = (n, a = {}) => {
+  const e = document.createElementNS(NS, n);
+  for (const k in a) e.setAttribute(k, a[k]);
+  return e;
+};
+const fmt = (v) => v.toFixed(2);
+
+document.getElementById("asof").textContent =
+  "Collected " + DATA.asof + " · us-west-2, us-east-1, us-east-2 (AWS) · " +
+  "westus2, eastus, eastus2 (Azure) · us-central1, us-west1, us-east4 (GCP)";
+
+/* ---------- KPI row ---------- */
+const snap = DATA.snapshot;
+const find = (chip, cloud) => snap.find((r) => r.chip === chip && r.cloud === cloud);
+const kpiDefs = [
+  { k: "RTX PRO 6000 · 96 GB", get: () => {
+      const a = find("rtx_pro_6000", "aws"), z = find("rtx_pro_6000", "azure");
+      return [fmt(a.median) + " / " + fmt(z.median), "AWS / Azure — the same card, opposite sides of parity"];
+    } },
+  { k: "H100 · 80 GB", get: () => {
+      const a = find("h100", "aws"), z = find("h100", "azure"), g = find("h100", "gcp");
+      return [fmt(z.median) + " – " + fmt(g.median), "Azure to Google. AWS sits between, at " + fmt(a.median)];
+    } },
+  { k: "RTX PRO 4500 · 32 GB", get: () => {
+      const a = find("rtx_pro_4500", "aws");
+      return [fmt(a.median), "AWS median across 18 SKUs — every size below parity"];
+    } },
+];
+document.getElementById("kpis").innerHTML = kpiDefs.map((d) => {
+  const [v, n] = d.get();
+  return '<div class="kpi"><div class="k">' + d.k + '</div><div class="v">' + v +
+         '</div><div class="n">' + n + "</div></div>";
+}).join("");
+
+/* ---------- tooltip ---------- */
+const tip = document.getElementById("tip");
+function showTip(html, x, y) {
+  tip.innerHTML = html;
+  tip.style.opacity = "1";
+  const r = tip.getBoundingClientRect();
+  let left = x + 16, top = y - r.height / 2;
+  if (left + r.width > innerWidth - 8) left = x - r.width - 16;
+  top = Math.max(8, Math.min(top, innerHeight - r.height - 8));
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+const hideTip = () => { tip.style.opacity = "0"; };
+
+/* ---------- chart 1: 90-day lines ---------- */
+(function () {
+  const svg = document.getElementById("chart1");
+  const W = 900, H = 380, M = { t: 14, r: 128, b: 34, l: 46 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+
+  const keys = Object.keys(DATA.history);
+  const all = keys.flatMap((k) => DATA.history[k].points);
+  const dates = [...new Set(all.map((p) => p.d))].sort();
+  const yMax = Math.max(...all.map((p) => p.tp)) * 1.06;
+  const yMin = Math.min(0.5, Math.min(...all.map((p) => p.tp)) * 0.94);
+  const X = (d) => M.l + (dates.indexOf(d) / (dates.length - 1)) * iw;
+  const Y = (v) => M.t + ih - ((v - yMin) / (yMax - yMin)) * ih;
+
+  // band below parity, so "under water" reads pre-attentively
+  svg.appendChild(el("rect", {
+    x: M.l, y: Y(1), width: iw, height: Math.max(0, M.t + ih - Y(1)),
+    fill: "var(--band)",
+  }));
+
+  for (let v = 0.5; v <= yMax; v += 0.5) {
+    if (v < yMin) continue;
+    svg.appendChild(el("line", { x1: M.l, x2: M.l + iw, y1: Y(v), y2: Y(v), class: "gridline" }));
+    const t = el("text", { x: M.l - 9, y: Y(v) + 4, class: "axis-text", "text-anchor": "end" });
+    t.textContent = v.toFixed(1) + "×";
+    svg.appendChild(t);
+  }
+
+  // parity rule
+  svg.appendChild(el("line", { x1: M.l, x2: M.l + iw, y1: Y(1), y2: Y(1), class: "parity" }));
+  const pl = el("text", { x: M.l + 6, y: Y(1) - 7, class: "parity-text" });
+  pl.textContent = "parity — spot equals the three-year price";
+  svg.appendChild(pl);
+
+  dates.forEach((d, i) => {
+    if (i % 15 !== 0 && i !== dates.length - 1) return;
+    const t = el("text", { x: X(d), y: H - 12, class: "axis-text", "text-anchor": "middle" });
+    t.textContent = d.slice(5).replace("-", "/");
+    svg.appendChild(t);
+  });
+
+  keys.forEach((k, i) => {
+    const s = DATA.history[k];
+    const d = s.points.map((p, j) => (j ? "L" : "M") + X(p.d) + " " + Y(p.tp)).join(" ");
+    svg.appendChild(el("path", { d, class: "line", stroke: SERIES[i] }));
+  });
+
+  // Direct labels, pushed apart so near-equal endpoints stay readable. Two
+  // series can end within a few hundredths of each other, which at this scale
+  // is a handful of pixels; a label that overlaps its neighbour is worse than
+  // no label, and the relief rule makes these mandatory rather than optional.
+  const MIN_GAP = 15;
+  const marks = keys.map((k, i) => {
+    const last = DATA.history[k].points[DATA.history[k].points.length - 1];
+    return { i, k, tp: last.tp, y0: Y(last.tp), y: Y(last.tp) };
+  }).sort((a, b) => a.y0 - b.y0);
+  for (let i = 1; i < marks.length; i++) {
+    marks[i].y = Math.max(marks[i].y, marks[i - 1].y + MIN_GAP);
+  }
+  const overflow = marks[marks.length - 1].y - (M.t + ih);
+  if (overflow > 0) marks.forEach((m) => { m.y -= overflow; });
+  marks.forEach((m) => {
+    const x = M.l + iw;
+    if (Math.abs(m.y - m.y0) > 1) {
+      // leader from the line end to the displaced label
+      svg.appendChild(el("path", {
+        d: "M" + x + " " + m.y0 + " L" + (x + 5) + " " + m.y0 +
+           " L" + (x + 7) + " " + m.y + " L" + (x + 10) + " " + m.y,
+        fill: "none", stroke: SERIES[m.i], "stroke-width": 1, opacity: .55,
+      }));
+    }
+    const lab = el("text", { x: x + 13, y: m.y + 4, class: "dlabel", fill: SERIES[m.i] });
+    lab.textContent = DATA.history[m.k].label.split(" ")[0] + "  " + fmt(m.tp);
+    svg.appendChild(lab);
+  });
+
+  document.getElementById("legend-1").innerHTML = keys.map((k, i) =>
+    '<span><i class="swatch" style="background:' + SERIES[i] + '"></i>' +
+    DATA.history[k].label + " · 3yr $" + DATA.history[k].commit3y.toFixed(2) + "/hr</span>"
+  ).join("");
+
+  // crosshair
+  const cross = el("line", { class: "gridline", "stroke-width": 1.5, opacity: 0 });
+  svg.appendChild(cross);
+  const dots = keys.map((k, i) => {
+    const c = el("circle", { r: 4.5, fill: SERIES[i], stroke: "var(--surface-1)",
+                             "stroke-width": 2, opacity: 0 });
+    svg.appendChild(c);
+    return c;
+  });
+  svg.appendChild(el("rect", {
+    x: M.l, y: M.t, width: iw, height: ih, fill: "transparent", style: "cursor:crosshair",
+  }));
+  const hit = svg.lastChild;
+  hit.addEventListener("mousemove", (ev) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((ev.clientX - box.left) / box.width) * W;
+    let idx = Math.round(((px - M.l) / iw) * (dates.length - 1));
+    idx = Math.max(0, Math.min(dates.length - 1, idx));
+    const day = dates[idx];
+    cross.setAttribute("x1", X(day)); cross.setAttribute("x2", X(day));
+    cross.setAttribute("y1", M.t); cross.setAttribute("y2", M.t + ih);
+    cross.setAttribute("opacity", 1);
+    let rows = "";
+    keys.forEach((k, i) => {
+      const p = DATA.history[k].points.find((q) => q.d === day);
+      if (!p) { dots[i].setAttribute("opacity", 0); return; }
+      dots[i].setAttribute("cx", X(day)); dots[i].setAttribute("cy", Y(p.tp));
+      dots[i].setAttribute("opacity", 1);
+      rows += '<div class="row"><i><span class="swatch" style="background:' + SERIES[i] +
+              '"></span>' + DATA.history[k].label.split(" ")[0] + "</i><b2>" + fmt(p.tp) +
+              "× &nbsp;$" + p.spot.toFixed(3) + "</b2></div>";
+    });
+    showTip("<b>" + day + "</b>" + rows, ev.clientX, ev.clientY);
+  });
+  hit.addEventListener("mouseleave", () => {
+    hideTip(); cross.setAttribute("opacity", 0);
+    dots.forEach((d) => d.setAttribute("opacity", 0));
+  });
+})();
+
+/* ---------- chart 2: dot plot ---------- */
+(function () {
+  const svg = document.getElementById("chart2");
+  const W = 900, H = 460, M = { t: 26, r: 24, b: 40, l: 176 };
+  const iw = W - M.l - M.r;
+
+  const order = [...new Set(snap.map((r) => r.chip))];
+  const rowH = (H - M.t - M.b) / order.length;
+  const xMax = Math.max(...snap.map((r) => r.max)) * 1.05;
+  const X = (v) => M.l + (v / xMax) * iw;
+  const Y = (chip) => M.t + order.indexOf(chip) * rowH + rowH / 2;
+
+  svg.appendChild(el("rect", {
+    x: M.l, y: M.t - 10, width: X(1) - M.l, height: H - M.t - M.b + 12, fill: "var(--band)",
+  }));
+
+  for (let v = 0; v <= xMax; v += 0.5) {
+    svg.appendChild(el("line", {
+      x1: X(v), x2: X(v), y1: M.t - 10, y2: H - M.b + 2, class: "gridline",
+    }));
+    const t = el("text", { x: X(v), y: H - M.b + 20, class: "axis-text", "text-anchor": "middle" });
+    t.textContent = v.toFixed(1) + "×";
+    svg.appendChild(t);
+  }
+  svg.appendChild(el("line", {
+    x1: X(1), x2: X(1), y1: M.t - 10, y2: H - M.b + 2, class: "parity",
+  }));
+  const pt = el("text", { x: X(1), y: M.t - 16, class: "parity-text", "text-anchor": "middle" });
+  pt.textContent = "parity";
+  svg.appendChild(pt);
+
+  order.forEach((chip) => {
+    const rows = snap.filter((r) => r.chip === chip);
+    const meta = rows[0];
+    const lab = el("text", { x: M.l - 12, y: Y(chip) - 2, class: "axis-text",
+                             "text-anchor": "end", fill: "var(--text-primary)" });
+    lab.setAttribute("font-size", "12.5");
+    lab.textContent = meta.name.replace(" Blackwell Server Edition", "")
+                               .replace(" Blackwell", "").replace(" SXM", "");
+    svg.appendChild(lab);
+    const vr = el("text", { x: M.l - 12, y: Y(chip) + 13, class: "axis-text", "text-anchor": "end" });
+    vr.textContent = meta.vram_gb ? meta.vram_gb + " GB · " + meta.launched : "";
+    svg.appendChild(vr);
+
+    rows.forEach((r) => {
+      const ci = CLOUDS.findIndex((c) => c[0] === r.cloud);
+      const color = SERIES[ci];
+      if (r.max > r.min) {
+        svg.appendChild(el("line", {
+          x1: X(r.min), x2: X(r.max), y1: Y(chip), y2: Y(chip),
+          stroke: color, "stroke-width": 2, opacity: .3, "stroke-linecap": "round",
+        }));
+      }
+      const c = el("circle", {
+        cx: X(r.median), cy: Y(chip), r: 6, fill: color,
+        stroke: "var(--surface-1)", "stroke-width": 2, style: "cursor:pointer",
+      });
+      c.addEventListener("mousemove", (ev) => showTip(
+        "<b>" + r.name + " · " + CLOUDS[ci][1] + "</b>" +
+        '<div class="row"><i>median</i><b2>' + fmt(r.median) + "×</b2></div>" +
+        '<div class="row"><i>range</i><b2>' + fmt(r.min) + " – " + fmt(r.max) + "</b2></div>" +
+        '<div class="row"><i>SKUs</i><b2>' + r.n + "</b2></div>",
+        ev.clientX, ev.clientY));
+      c.addEventListener("mouseleave", hideTip);
+      svg.appendChild(c);
+    });
+  });
+
+  document.getElementById("legend-2").innerHTML = CLOUDS.map((c, i) =>
+    '<span><i class="swatch" style="background:' + SERIES[i] + '"></i>' + c[1] + "</span>"
+  ).join("");
+})();
+
+/* ---------- table ---------- */
+document.querySelector("#table tbody").innerHTML = snap.map((r) => {
+  const cloud = (CLOUDS.find((c) => c[0] === r.cloud) || [, r.cloud])[1];
+  return '<tr class="' + (r.median < 1 ? "below" : "") + '"><td>' + r.name + "</td><td>" +
+    (r.vram_gb ? r.vram_gb + " GB" : "—") + "</td><td>" + cloud +
+    '</td><td class="num">' + r.n + '</td><td class="num tp">' + fmt(r.median) +
+    '</td><td class="num">' + fmt(r.min) + '</td><td class="num">' + fmt(r.max) + "</td></tr>";
+}).join("");
+
+const btnT = document.getElementById("btn-table");
+btnT.addEventListener("click", () => {
+  const on = btnT.getAttribute("aria-pressed") === "true";
+  btnT.setAttribute("aria-pressed", String(!on));
+  document.getElementById("tablecard").classList.toggle("hidden", on);
+  btnT.textContent = on ? "Show the numbers" : "Hide the numbers";
+});
+
+const btnD = document.getElementById("btn-theme");
+const prefersDark = matchMedia("(prefers-color-scheme: dark)").matches;
+let dark = prefersDark;
+const paint = () => {
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  btnD.setAttribute("aria-pressed", String(dark));
+  btnD.textContent = dark ? "Light mode" : "Dark mode";
+};
+paint();
+btnD.addEventListener("click", () => { dark = !dark; paint(); });
+</script>
+</body>
+</html>
