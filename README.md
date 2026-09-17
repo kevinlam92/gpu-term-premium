@@ -48,7 +48,7 @@ https://prices.azure.com/api/retail/prices?$filter=serviceName eq 'Virtual Machi
 ```bash
 pip install -r requirements.txt
 
-python -m gpu_term_premium collect --clouds aws azure   # ~5 min, writes data/
+python -m gpu_term_premium collect --clouds aws azure gcp   # ~6 min, writes data/
 python -m gpu_term_premium report                       # the table
 python -m gpu_term_premium ladder                       # size monotonicity
 python -m gpu_term_premium report --csv > premium.csv
@@ -125,18 +125,23 @@ These are pinned in `tests/test_ratio.py` rather than trusted.
 
 The same physical card carries opposite signals on different clouds:
 
-| chip | AWS median | Azure median |
-|---|---|---|
-| RTX PRO 6000 (96 GB) | **1.79** | **0.65** |
-| H100 (80 GB) | 1.00 | 0.43 |
-| H200 (141 GB) | 1.14 | **2.06** |
+| chip | AWS | Azure | Google |
+|---|---|---|---|
+| RTX PRO 6000 (96 GB) | **1.78** | **0.65** | — |
+| H100 (80 GB) | 1.00 | **0.43** | **1.40** |
+| H200 (141 GB) | 1.14 | **2.06** | 1.37 |
+| L4 (24 GB) | 1.23 | — | 1.33 |
 
-Measured 2026-09-17, three US regions each. The H200 row is what makes this
-worth reporting: if Azure simply priced all its commitments high, every Azure
-ratio would sit low. One chip running the other way means the divergence is
-per-chip, so it is about that chip's inventory on that cloud — not a pricing
-convention. Any claim that a given card is "scarce" needs naming which cloud it
-is scarce *on*.
+Medians, measured 2026-09-17, three US regions per cloud. The H100 row spans more
+than 3× across three sellers of the identical part in the same week.
+
+Two rows are what make this worth reporting rather than an artifact. If Azure
+simply priced all its commitments high, every Azure ratio would sit low — but
+its H200 is the highest number in the table. And if the RTX PRO 6000 were
+scarce as a *chip*, it could not be 1.78 on one cloud and 0.65 on another.
+The divergence is per-chip and per-seller, which means it is about inventory,
+not pricing convention. Any claim that a given card is "scarce" has to name the
+cloud it is scarce *on*.
 
 ## `ladder`
 
