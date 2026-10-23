@@ -33,6 +33,16 @@ AWS, Azure and GCP all publish both legs for free. Nobody puts them in a ratio.
 instance types in us-west-2, plus today's cross-cloud reading for every chip where both legs
 are published. Rebuilt by `scripts/build_chart.py` into `docs/`, which is what Pages serves.
 
+It updates itself. `.github/workflows/collect.yml` runs daily at 13:17 UTC: it collects all
+three clouds, refuses to publish if any cloud came back empty (`scripts/check_panel.py`),
+rebuilds the page, and commits the day's panel plus `docs/`. The raw responses are kept as a
+90-day workflow artifact. It needs two settings on the repo:
+
+| setting | kind | value |
+|---|---|---|
+| `AWS_ROLE_ARN` | variable | IAM role trusted for `repo:kevinlam92/gpu-term-premium:ref:refs/heads/main` via GitHub OIDC, allowed the four read-only calls listed under *Install and run* |
+| `GCP_BILLING_API_KEY` | secret | Cloud Billing Catalog API key |
+
 ## Verify the headline without installing anything
 
 Azure's pricing API is anonymous. Paste this in a browser to get the H100 spot and 3-year rows
@@ -49,13 +59,18 @@ https://prices.azure.com/api/retail/prices?$filter=serviceName eq 'Virtual Machi
 pip install -r requirements.txt
 
 python -m gpu_term_premium collect --clouds aws azure gcp   # ~6 min, writes data/
-python -m gpu_term_premium report                       # the table
+python -m gpu_term_premium report                       # the table, latest day
+python -m gpu_term_premium report --day 2026-09-17      # any earlier collection
 python -m gpu_term_premium ladder                       # size monotonicity
 python -m gpu_term_premium report --csv > premium.csv
 ```
 
+Each command reads one collection day, never several: pooling days would average
+two markets' spot prices against the cheaper of two commitment prices.
+
 AWS needs read-only credentials (`ec2:DescribeSpotPriceHistory`,
-`pricing:GetProducts`, `savingsplans:DescribeSavingsPlansOfferingRates`). Azure
+`ec2:DescribeInstanceTypeOfferings`, `pricing:GetProducts`,
+`savingsplans:DescribeSavingsPlansOfferingRates`). Azure
 needs nothing at all — its Retail Prices API is anonymous. GCP needs an API key
 in `GCP_BILLING_API_KEY`; without one it is skipped rather than failing the run.
 

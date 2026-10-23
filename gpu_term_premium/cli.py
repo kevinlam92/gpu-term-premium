@@ -52,7 +52,7 @@ def cmd_collect(args):
 
 def cmd_report(args):
     store = Store(args.data)
-    panel = store.load_panel()
+    panel = store.load_panel(args.day)
     if not panel:
         print("no panel data; run collect first")
         return 1
@@ -77,7 +77,7 @@ def cmd_report(args):
 
 def cmd_ladder(args):
     store = Store(args.data)
-    panel = store.load_panel()
+    panel = store.load_panel(args.day)
     if not panel:
         print("no panel data; run collect first")
         return 1
@@ -105,9 +105,11 @@ def main(argv=None):
     r = sub.add_parser("report", help="term premium per SKU")
     r.add_argument("--json", action="store_true")
     r.add_argument("--csv", action="store_true")
+    r.add_argument("--day", help="collection date YYYY-MM-DD (default: latest)")
     r.set_defaults(func=cmd_report)
 
     l = sub.add_parser("ladder", help="within-family size ladder monotonicity")
+    l.add_argument("--day", help="collection date YYYY-MM-DD (default: latest)")
     l.set_defaults(func=cmd_ladder)
 
     args = p.parse_args(argv)

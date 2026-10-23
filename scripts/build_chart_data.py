@@ -124,12 +124,14 @@ def main() -> int:
         print("no raw archive; run collect first")
         return 1
     day_dir = days[-1]
+    asof = day_dir.name.split("=", 1)[1]
 
     payload = {
-        "asof": day_dir.name.split("=", 1)[1],
+        "asof": asof,
         "history_region": "us-west-2",
         "history": build_history(day_dir, "us-west-2"),
-        "snapshot": build_snapshot(store.load_panel()),
+        # Same day as the raw archive, so both figures describe one collection.
+        "snapshot": build_snapshot(store.load_panel(asof)),
     }
     dest = ROOT / "data" / "chart_data.json"
     dest.write_text(json.dumps(payload, indent=1), encoding="utf-8")

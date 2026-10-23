@@ -1,0 +1,83 @@
+name: collect
+
+# Daily: fetch all three clouds, rebuild the page, commit it. Pages serves
+# /docs off main, so the commit is the deploy.
+
+on:
+  schedule:
+    - cron: "17 13 * * *"   # 13:17 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: write   # commit the panel and the rebuilt page
+  id-token: write   # OIDC into the read-only AWS role
+  pages: write      # request a Pages build after the push
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt pytest
+
+      - name: Test
+        run: python -m pytest -q
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Collect
+        env:
+          GCP_BILLING_API_KEY: ${{ secrets.GCP_BILLING_API_KEY }}
+        run: python -m gpu_term_premium collect --clouds aws azure gcp
+
+      # Upstream bytes for every published number. Kept 90 days here; raw is
+      # too big for git (see .gitignore).
+      - name: Archive raw responses
+        uses: actions/upload-artifact@v7
+        with:
+          name: raw-${{ github.run_id }}
+          path: data/raw/
+          retention-days: 90
+
+      - name: Refuse a thin collection
+        run: python scripts/check_panel.py
+
+      - name: Build page
+        run: |
+          python scripts/build_chart_data.py
+          python scripts/build_chart.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/panel data/chart_data.json chart/chart.html docs/
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+            exit 0
+          fi
+          git commit -m "data: daily collect $(date -u +%F)"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      # Pushes made with GITHUB_TOKEN do not reliably start a branch-based Pages
+      # build, so ask for one. A failure here leaves the commit in place.
+      - name: Request Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "::warning::Pages build request failed; the next push will rebuild"

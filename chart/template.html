@@ -226,10 +226,9 @@
 <figure>
   <p class="fig-kicker">Figure 1</p>
   <h2>Ninety days in one AWS region</h2>
-  <p class="standfirst">
-    Nvidia&rsquo;s new 32&nbsp;GB card crossed under parity in mid-August and kept falling.
-    Over the same window, in the same four availability zones, the 96&nbsp;GB card and
-    the previous-generation L40S moved the other way.
+  <p class="standfirst" id="standfirst1">
+    Nvidia&rsquo;s new 32&nbsp;GB card against the 96&nbsp;GB card and the
+    previous-generation L40S, in the same region over the same window.
   </p>
   <svg id="chart1" viewBox="0 0 880 400" role="img" aria-labelledby="c1t">
     <title id="c1t">Term premium over ninety days for four AWS GPU instance types in us-west-2</title>
@@ -246,7 +245,7 @@
   <p class="standfirst">
     Every chip for which a seller publishes both an hourly and a three-year price.
     Dots mark the median across SKUs and regions; the line behind them is the range.
-    The H100 spans more than threefold depending only on whose data centre it sits in.
+    <span id="spread2"></span>
   </p>
   <svg id="chart2" viewBox="0 0 880 470" role="img" aria-labelledby="c2t">
     <title id="c2t">Term premium by chip and cloud provider</title>
@@ -318,10 +317,77 @@ const EMPHASIS = {
   "g6e.2xlarge": { colour: "--quiet-2",  quiet: true,  short: "g6e.2xlarge" },
 };
 
+const longDate = (d, year = true) => new Date(d + "T00:00:00Z").toLocaleDateString("en-GB",
+  Object.assign({ day: "numeric", month: "long", timeZone: "UTC" }, year ? { year: "numeric" } : {}));
+
 document.getElementById("byline").textContent =
-  "Measured " + new Date(DATA.asof + "T00:00:00Z").toLocaleDateString("en-GB",
-    { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) +
-  " · three US regions per cloud";
+  "Measured " + longDate(DATA.asof) + " · three US regions per cloud";
+
+/* ---------- standfirsts, written from the data ----------
+   The page republishes daily, so no sentence above a figure may state a fact the
+   data can stop supporting. Each one is worked out from DATA on every load. */
+// begin:describe
+function describeHistory(history) {
+  const facts = (k) => {
+    const h = history[k];
+    if (!h || !h.points.length) return null;
+    const pts = h.points, last = pts[pts.length - 1];
+    let since = null;  // first day of the current run above or below parity
+    for (let i = pts.length - 1; i > 0; i--) {
+      if ((pts[i].tp < 1) !== (pts[i - 1].tp < 1)) { since = pts[i].d; break; }
+    }
+    return { n: pts.length, below: pts.filter((p) => p.tp < 1).length, last, since };
+  };
+  const lead = (name, f) => {
+    const now = "reads " + f.last.tp.toFixed(2) + " today";
+    if (f.below === 0) return name + " stayed above parity all " + f.n + " days and " + now + ".";
+    if (f.below === f.n) return name + " sat below parity all " + f.n + " days and " + now + ".";
+    if (f.last.tp < 1) {
+      return name + " has been below parity since " + longDate(f.since, false) + ", " +
+        f.below + " of the last " + f.n + " days in all, and " + now + ".";
+    }
+    return name + " spent " + f.below + " of the last " + f.n + " days below parity, " +
+      "has been back above it since " + longDate(f.since, false) + ", and " + now + ".";
+  };
+  const out = [];
+  const a = facts("g7.2xlarge"), b = facts("g7.4xlarge");
+  if (a) out.push(lead("Nvidia’s new 32 GB card, as a g7.2xlarge,", a));
+  if (b) out.push(lead(a ? "The larger g7.4xlarge" : "Nvidia’s new 32 GB card, as a g7.4xlarge,", b));
+  const c = facts("g7e.2xlarge"), d = facts("g6e.2xlarge");
+  if (c && d) {
+    const never = c.below === 0 && d.below === 0;
+    out.push("Over the same window, in the same region, the 96 GB card and the " +
+      "previous-generation L40S " + (never ? "never went below parity, and " : "") +
+      "read " + c.last.tp.toFixed(2) + " and " + d.last.tp.toFixed(2) + " today.");
+  }
+  return out.join(" ");
+}
+
+function describeSpread(snapshot) {
+  // The chip whose cloud medians sit furthest apart. Said only when it is at
+  // least twofold, and only in whole multiples so the claim stays a floor.
+  const byChip = {};
+  for (const r of snapshot) (byChip[r.chip] = byChip[r.chip] || []).push(r);
+  let best = null;
+  for (const rows of Object.values(byChip)) {
+    if (rows.length < 2) continue;
+    const meds = rows.map((r) => r.median);
+    const spread = Math.max(...meds) / Math.min(...meds);
+    if (!best || spread > best.spread) best = { spread, name: rows[0].name };
+  }
+  if (!best || best.spread < 2) return "";
+  const WORDS = ["", "", "twofold", "threefold", "fourfold", "fivefold", "sixfold"];
+  const k = Math.min(Math.floor(best.spread), WORDS.length - 1);
+  return "The " + best.name + " spans more than " + WORDS[k] +
+    " depending only on whose data centre it sits in.";
+}
+// end:describe
+
+{
+  const s1 = describeHistory(DATA.history);
+  if (s1) document.getElementById("standfirst1").textContent = s1;
+  document.getElementById("spread2").textContent = describeSpread(DATA.snapshot);
+}
 
 /* ---------- tooltip ---------- */
 const tip = document.getElementById("tip");

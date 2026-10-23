@@ -81,11 +81,28 @@ class Store:
                 w.writerow(asdict(r))
         return path
 
-    def load_panel(self) -> list[dict]:
+    def panel_days(self) -> list[str]:
+        """Collection dates with a panel file, oldest first."""
+        return sorted(p.stem.split("=", 1)[1]
+                      for p in (self.root / "panel").glob("dt=*.csv"))
+
+    def load_panel(self, day: str | None = None) -> list[dict]:
+        """Rows for one collection day, the latest by default.
+
+        Days are never pooled. ``ratio.build`` averages every spot row it is
+        given and takes the cheapest commitment, so a multi-day panel would
+        blend two markets into one number that no seller ever quoted.
+        """
+        days = self.panel_days()
+        if not days:
+            return []
+        day = day or days[-1]
+        path = self.root / "panel" / f"dt={day}.csv"
+        if not path.exists():
+            raise FileNotFoundError(f"no panel for {day}; have {', '.join(days)}")
         out: list[dict] = []
-        for p in sorted((self.root / "panel").glob("dt=*.csv")):
-            with p.open(newline="", encoding="utf-8") as fh:
-                for row in csv.DictReader(fh):
-                    row["usd_per_hour"] = float(row["usd_per_hour"])
-                    out.append(row)
+        with path.open(newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                row["usd_per_hour"] = float(row["usd_per_hour"])
+                out.append(row)
         return out
