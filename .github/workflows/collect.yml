@@ -11,7 +11,6 @@ on:
 permissions:
   contents: write   # commit the panel and the rebuilt page
   id-token: write   # OIDC into the read-only AWS role
-  pages: write      # request a Pages build after the push
 
 concurrency:
   group: collect
@@ -74,10 +73,4 @@ jobs:
           git commit -m "data: daily collect $(date -u +%F)"
           git pull --rebase origin main
           git push origin HEAD:main
-
-      # Pushes made with GITHUB_TOKEN do not reliably start a branch-based Pages
-      # build, so ask for one. A failure here leaves the commit in place.
-      - name: Request Pages build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "::warning::Pages build request failed; the next push will rebuild"
+          # The push itself starts the branch-based Pages build.
