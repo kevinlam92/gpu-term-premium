@@ -15,10 +15,14 @@ import csv
 import gzip
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 PRICE_TYPES = ("spot", "ondemand", "commit1y", "commit3y")
+
+# One collect takes minutes; a gap longer than this between consecutive rows of
+# the same cloud means a second run that day.
+RUN_GAP = timedelta(minutes=30)
 
 FIELDS = (
     "asof", "cloud", "region", "zone", "sku", "chip", "vram_gb",
@@ -89,9 +93,11 @@ class Store:
     def load_panel(self, day: str | None = None) -> list[dict]:
         """Rows for one collection day, the latest by default.
 
-        Days are never pooled. ``ratio.build`` averages every spot row it is
-        given and takes the cheapest commitment, so a multi-day panel would
-        blend two markets into one number that no seller ever quoted.
+        Days are never pooled, and neither are runs. ``ratio.build`` averages
+        every spot row it is given and takes the cheapest commitment, so two
+        days, or two runs on one day, would blend into a number no seller ever
+        quoted. The file stays append-only; a re-run supersedes earlier runs of
+        the same cloud only here, at read time.
         """
         days = self.panel_days()
         if not days:
@@ -105,4 +111,19 @@ class Store:
             for row in csv.DictReader(fh):
                 row["usd_per_hour"] = float(row["usd_per_hour"])
                 out.append(row)
-        return out
+        return latest_run(out)
+
+
+def latest_run(rows: list[dict]) -> list[dict]:
+    """Keep, per cloud, only the rows of that cloud's last run of the day."""
+    stamps: dict[str, list[datetime]] = {}
+    for r in rows:
+        stamps.setdefault(r["cloud"], []).append(datetime.fromisoformat(r["asof"]))
+    start: dict[str, datetime] = {}
+    for cloud, ts in stamps.items():
+        ts.sort()
+        start[cloud] = ts[0]
+        for a, b in zip(ts, ts[1:]):
+            if b - a > RUN_GAP:
+                start[cloud] = b
+    return [r for r in rows if datetime.fromisoformat(r["asof"]) >= start[r["cloud"]]]

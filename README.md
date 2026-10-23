@@ -40,8 +40,18 @@ rebuilds the page, and commits the day's panel plus `docs/`. The raw responses a
 
 | setting | kind | value |
 |---|---|---|
-| `AWS_ROLE_ARN` | variable | IAM role trusted for `repo:kevinlam92/gpu-term-premium:ref:refs/heads/main` via GitHub OIDC, allowed the four read-only calls listed under *Install and run* |
+| `AWS_ROLE_ARN` | variable | IAM role trusted via GitHub OIDC for this repo's `main`, allowed the four read-only calls listed under *Install and run* |
 | `GCP_BILLING_API_KEY` | secret | Cloud Billing Catalog API key |
+
+This repo issues OIDC tokens with GitHub's immutable subject, so the role's trust
+condition must name the owner and repo IDs, not just their names:
+`repo:kevinlam92@1094138/gpu-term-premium@1375092713:ref:refs/heads/main`. The plain
+`repo:kevinlam92/gpu-term-premium:...` form is rejected with *Not authorized to perform
+sts:AssumeRoleWithWebIdentity*. `gh api repos/{owner}/{repo}/actions/oidc/customization/sub`
+prints the prefix.
+
+A second run on the same day appends to that day's panel; readers use only each
+cloud's latest run.
 
 ## Verify the headline without installing anything
 
